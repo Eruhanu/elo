@@ -1,0 +1,5 @@
+CREATE OR REPLACE PACKAGE ELO AUTHID CURRENT_USER
+AS
+  procedure run(piv_name varchar2);
+END;
+/
