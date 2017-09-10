@@ -42,8 +42,9 @@ AS
     gv_proc := 'RUN';
     
     -- Initialize Log Variables
-    plib.o_log := log_type.initialize('YES',gv_job_module,gv_job_owner,gv_pck ,gv_proc);
-
+    pl.logger := util.logtype.init(gv_pck||'.'||gv_proc);
+    
+    
     select 
       db_link, source, target, filter, source_hint, target_hint, v_delta_column, last_delta
     into 
@@ -100,8 +101,8 @@ AS
     execute immediate gv_dyn_task;
     commit;
 
-    plib.o_log.log(10,4,NULL,gv_pck||'.'||gv_proc,SQL%ROWCOUNT,gv_dyn_task);
-
+    pl.logger.success(SQL%ROWCOUNT || ' : inserted', gv_dyn_task);
+  
     if v_delta_column is not null then
       prc_update_last_delta(
         piv_name  => piv_name,     
@@ -116,7 +117,7 @@ AS
       when others then
         gv_sql_errc := SQLCODE;
         gv_sql_errm := SQLERRM;
-        plib.o_log.log( gv_sql_errc, 1, gv_sql_errm, NULL, NULL, gv_dyn_task);
+        pl.logger.error(gv_sql_errc||' : '||gv_sql_errm, gv_dyn_task);
         raise_application_error(gv_sql_errc, gv_sql_errm);
   end;
 

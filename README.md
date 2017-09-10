@@ -7,8 +7,8 @@ to define extraction rule for a table.
 
 ### Dependencies
   
-  **ELO** uses [PL](https://github.com/bluecolor/pl) for logging. 
-  **PL** is a small utility and logging library for oracle. 
+    **ELO** uses [PL](https://github.com/bluecolor/pl) for logging. 
+    **PL** is a small utility and logging library for oracle. 
 
 ### Installation
 
