@@ -1,7 +1,7 @@
-CREATE OR REPLACE PACKAGE BODY ELO 
+CREATE OR REPLACE PACKAGE BODY UTIL.ELO
 AS
 
-  gv_job_module   VARCHAR2(50)  := 'ELO';                 -- Job Module Name : Extract/Load package
+  gv_job_module   VARCHAR2(50)  := 'ELO';                 -- Job Module Name : Extract Load package
   gv_pck          VARCHAR2(50)  := 'ELO';                 -- PLSQL Package Name
   gv_job_owner    VARCHAR2(50)  := 'UTIL';                -- Owner of the Job
   gv_proc         VARCHAR2(100);                          -- Procedure Name
@@ -10,16 +10,16 @@ AS
   gv_sql_errm     VARCHAR2(4000);                         -- SQL Error Message
   gv_sql_errc     NUMBER;                                 -- SQL Error Code
   gv_dyn_task     LONG := '';
-  gv_date_format  varchar2(20) := 'yyyy.mm.dd hh24:mi:ss';
+  gv_date_format  varchar2(30) := 'yyyy.mm.dd hh24:mi:ss';
 
   function fun_get_delta_col_type(
-    fiv_db_link varchar2, 
-    fiv_table   varchar2, 
+    fiv_db_link varchar2,
+    fiv_table   varchar2,
     fiv_column  varchar2) return varchar2;
 
   procedure prc_update_last_delta(
-    piv_name            varchar2, 
-    piv_table           varchar2, 
+    piv_name            varchar2,
+    piv_table           varchar2,
     piv_delta_col       varchar2,
     piv_delta_col_type  varchar2
   );
@@ -30,7 +30,7 @@ AS
     v_source          varchar2(100);
     v_target          varchar2(100);
     v_filter          varchar2(4000);
-    v_source_hint     varchar2(4000);  
+    v_source_hint     varchar2(4000);
     v_target_hint     varchar2(4000);
     v_delta_column    varchar2(50);
     v_last_delta      varchar2(1000);
@@ -40,38 +40,40 @@ AS
   begin
 
     gv_proc := 'RUN';
-    
+
     -- Initialize Log Variables
     pl.logger := util.logtype.init(gv_pck||'.'||gv_proc);
-    
-    
-    select 
+
+
+    select
       db_link, source, target, filter, source_hint, target_hint, v_delta_column, last_delta
-    into 
+    into
       v_db_link, v_source, v_target, v_filter, v_source_hint, v_target_hint, v_delta_column, v_last_delta
-    from 
+    from
       util.ELO_TABLES
     where
-      name = piv_name; 
+      name = piv_name;
 
     if trim(v_target_hint) is not null and instr(v_target_hint,'/*+') = 0
     then
       v_target_hint := '/*+'||v_target_hint||'*/';
-    end if;  
+    end if;
 
     if trim(v_source_hint) is not null and instr(v_source_hint,'/*+') = 0
     then
       v_source_hint := '/*+'||v_source_hint||'*/';
     end if;
 
-    v_delta_col_type := fun_get_delta_col_type(v_db_link, v_source, v_delta_column);
-
+    IF v_delta_column IS NOT NULL THEN
+      v_delta_data_type := fun_get_delta_col_type(v_db_link, v_source, v_delta_column);
+    END IF;	
+    	
     if v_filter is not null or v_delta_column is not null then
       v_filter := 'WHERE ' || v_filter;
       if v_delta_column is not null then
         v_filter := v_filter || ' AND '||v_delta_column||'>'||
-        case v_delta_col_type 
-          when 'DATE'     then plib.date_string(to_date(v_last_delta,gv_date_format))
+        case v_delta_data_type
+          when 'DATE'     then pl.date_string(to_date(v_last_delta,gv_date_format))
           when 'NUMBER'   then to_number(v_last_delta)
           when 'CHAR'     then v_last_delta
           when 'VARCHAR'  then v_last_delta
@@ -80,15 +82,15 @@ AS
       end if;
     end if;
 
-    select 
+    select
       LISTAGG(source_col, ', ') WITHIN GROUP (ORDER BY source_col) source_cols,
       LISTAGG(target_col, ', ') WITHIN GROUP (ORDER BY target_col) target_cols
     into v_source_cols, v_target_cols
-    from ELO_COLUMNS
+    from util.ELO_COLUMNS
     where name = piv_name;
 
     gv_dyn_task := '
-      INSERT '||v_target_hint||' INTO '|| v_target ||'  
+      INSERT '||v_target_hint||' INTO '|| v_target ||'
       ('||v_target_cols|| ')
       SELECT '||v_source_hint||'
       '||v_source_cols||'
@@ -102,13 +104,13 @@ AS
     commit;
 
     pl.logger.success(SQL%ROWCOUNT || ' : inserted', gv_dyn_task);
-  
+
     if v_delta_column is not null then
       prc_update_last_delta(
-        piv_name  => piv_name,     
-        piv_table => v_table_name,        
-        piv_delta_col => v_delta_column,    
-        piv_delta_col_type => v_delta_col_type
+        piv_name  => piv_name,
+        piv_table => v_target,
+        piv_delta_col => v_delta_column,
+        piv_delta_col_type => v_delta_data_type
       );
     end if;
 
@@ -123,14 +125,14 @@ AS
 
   function fun_get_delta_col_type(fiv_db_link varchar2, fiv_table varchar2, fiv_column varchar2) return varchar2
   is
-    v_owner       varchar2(30) := substr(fiv_table,1,instr(fiv_table'.')-1);
-    v_table_name  varchar2(30) := substr(fiv_table,instr(fiv_table'.')+1);
+    v_owner       varchar2(30) := substr(fiv_table,1,instr(fiv_table, '.')-1);
+    v_table_name  varchar2(30) := substr(fiv_table,instr(fiv_table, '.')+1);
     v_col_type    varchar2(50);
   begin
 
     gv_dyn_task:= '
       select data_type from all_tab_cols@'||fiv_db_link||'
-      where owner = '||v_owner||' and table_name='||v_table_name||'
+      where owner = '''||v_owner||''' and table_name='''||v_table_name||''' and column_name = '''|| fiv_column||'''
     ';
 
     execute immediate gv_dyn_task into v_col_type;
@@ -140,8 +142,8 @@ AS
   end;
 
   procedure prc_update_last_delta(
-    piv_name            varchar2, 
-    piv_table           varchar2, 
+    piv_name            varchar2,
+    piv_table           varchar2,
     piv_delta_col       varchar2,
     piv_delta_col_type  varchar2
   )
@@ -156,7 +158,7 @@ AS
     end if;
 
     gv_dyn_task := 'select /*+ parallel(16) */ '||gv_dyn_task||' from '||piv_table;
-    
+
     execute immediate gv_dyn_task into v_last_delta;
 
     gv_dyn_task := '
@@ -170,4 +172,3 @@ AS
   end;
 
 END;
-/
