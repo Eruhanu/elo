@@ -84,7 +84,7 @@ AS
 
     select
       LISTAGG(source_col, ', ') WITHIN GROUP (ORDER BY source_col) source_cols,
-      LISTAGG(target_col, ', ') WITHIN GROUP (ORDER BY target_col) target_cols
+      LISTAGG(target_col, ', ') WITHIN GROUP (ORDER BY source_col) target_cols
     into v_source_cols, v_target_cols
     from util.ELO_COLUMNS
     where name = piv_name;

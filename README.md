@@ -25,3 +25,18 @@ to define extraction rule for a table.
   * Run the contents of [elo.pks.sql](src/elo.pks.sql)
 
   * Run the contents of [elo.pkb.sql](src/elo.pkb.sql)
+
+### Tables
+  
+  **ELO_TABLES**
+  
+  * `name` unique name for the extraction of the table
+  * `db_link` db link to use for the extraction  
+  * `source` source table including schema `eg. SRC_SCHEMA.TABLE_NAME`
+  * `target` target table including schema `eg. TRG_SCHEMA.TABLE_NAME`
+  * `filter` filter for the source data
+  * `source_hint` select hint for the source
+  * `target_hint` insert hint for the target
+  * `delta_column` column to check if data is extracted using delta method.  
+  * `last_delta` last extracted value of the delta column
+
