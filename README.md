@@ -28,7 +28,7 @@ to define extraction rule for a table.
 
 ### Tables
   
-  **ELO_TABLES**
+  ##### ELO_TABLES
   
   * `name` unique name for the extraction of the table
   * `db_link` db link to use for the extraction  
@@ -40,7 +40,7 @@ to define extraction rule for a table.
   * `delta_column` column to check if data is extracted using delta method.  
   * `last_delta` last extracted value of the delta column
 
-  **ELO_COLUMNS**
+  ##### ELO_COLUMNS
 
   * `name` unique name for the extraction of the table. same name with `ELO_TABLES`
   * `source_col` source column or expression to extract.    
