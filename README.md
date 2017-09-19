@@ -40,3 +40,8 @@ to define extraction rule for a table.
   * `delta_column` column to check if data is extracted using delta method.  
   * `last_delta` last extracted value of the delta column
 
+  **ELO_COLUMNS**
+
+  * `name` unique name for the extraction of the table. same name with `ELO_TABLES`
+  * `source_col` source column or expression to extract.    
+  * `target_col` target column to load data.

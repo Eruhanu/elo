@@ -9,7 +9,7 @@ AS
 
   gv_sql_errm     VARCHAR2(4000);                         -- SQL Error Message
   gv_sql_errc     NUMBER;                                 -- SQL Error Code
-  gv_dyn_task     LONG := '';
+  gv_sql          LONG := '';
   gv_date_format  varchar2(30) := 'yyyy.mm.dd hh24:mi:ss';
 
   function fun_get_delta_col_type(
@@ -89,7 +89,7 @@ AS
     from util.ELO_COLUMNS
     where name = piv_name;
 
-    gv_dyn_task := '
+    gv_sql := '
       INSERT '||v_target_hint||' INTO '|| v_target ||'
       ('||v_target_cols|| ')
       SELECT '||v_source_hint||'
@@ -100,10 +100,10 @@ AS
 
     execute immediate 'truncate table ' || v_target;
 
-    execute immediate gv_dyn_task;
+    execute immediate gv_sql;
     commit;
 
-    pl.logger.success(SQL%ROWCOUNT || ' : inserted', gv_dyn_task);
+    pl.logger.success(SQL%ROWCOUNT || ' : inserted', gv_sql);
 
     if v_delta_column is not null then
       prc_update_last_delta(
@@ -119,7 +119,7 @@ AS
       when others then
         gv_sql_errc := SQLCODE;
         gv_sql_errm := SQLERRM;
-        pl.logger.error(gv_sql_errc||' : '||gv_sql_errm, gv_dyn_task);
+        pl.logger.error(gv_sql_errc||' : '||gv_sql_errm, gv_sql);
         raise_application_error(gv_sql_errc, gv_sql_errm);
   end;
 
@@ -130,14 +130,14 @@ AS
     v_col_type    varchar2(50);
   begin
 
-    gv_dyn_task:= '
+    gv_sql:= '
       select data_type from all_tab_cols@'||fiv_db_link||'
       where owner = '''||v_owner||''' and table_name='''||v_table_name||''' and column_name = '''|| fiv_column||'''
     ';
 
-    execute immediate gv_dyn_task into v_col_type;
+    execute immediate gv_sql into v_col_type;
 
-    return gv_dyn_task;
+    return gv_sql;
 
   end;
 
@@ -152,23 +152,103 @@ AS
   begin
 
     if piv_delta_col_type = 'DATE' then
-      gv_dyn_task := 'to_char(max('||piv_delta_col||'),'''||gv_date_format||''')';
+      gv_sql := 'to_char(max('||piv_delta_col||'),'''||gv_date_format||''')';
     else
-      gv_dyn_task := 'max('||piv_delta_col||')';
+      gv_sql := 'max('||piv_delta_col||')';
     end if;
 
-    gv_dyn_task := 'select /*+ parallel(16) */ '||gv_dyn_task||' from '||piv_table;
+    gv_sql := 'select /*+ parallel(16) */ '||gv_sql||' from '||piv_table;
 
-    execute immediate gv_dyn_task into v_last_delta;
+    execute immediate gv_sql into v_last_delta;
 
-    gv_dyn_task := '
+    gv_sql := '
       update ELO_TABLES set last_delta = '''||v_last_delta||'''
       where name = '''||piv_name||'''
     ';
 
-    execute immediate gv_dyn_task;
+    execute immediate gv_sql;
 
     commit;
   end;
+
+
+  function script(
+    fiv_table varchar2, 
+    fiv_dblk varchar2, 
+    fiv_name varchar2 default null, 
+    fiv_target_schema varchar2 default 'ODS'
+  ) return varchar2
+  is 
+    table_is_null     exception;
+    db_link_is_null   exception;
+    
+    pragma exception_init(table_is_null,   -20170);
+    pragma exception_init(db_link_is_null, -20171);
+
+    v_script  long := '';
+    v_columns long := '';
+  begin
+
+    if piv_table is null then raise table_is_null; end if;
+    
+    if piv_target_schema is null then raise db_link_is_null; end if;
+
+
+    v_script := '
+      create table '||piv_target_schema||'.'||substr(piv_table, instr(piv_target_schema,'.'))||' 
+      (
+        $COLUMNS
+      );
+    ';
+
+    gv_sql := 'select column_name, data_type, data_length from all_tab_cols@'||piv_dblk;
+    open c for gv_sql;
+
+    for r in c loop
+      if r.data_type in ('CHAR','VARCHAR','VARCHAR2','NUMBER') then
+        v_columns := v_columns := r.column_name||' '||r.data_type||'('||r.data_length||'),'||chr(10);
+      else
+        v_columns := v_columns := r.column_name||' '||r.data_type||','||chr(10);
+      end if;
+    end loop;
+    v_columns := rtrim(v_columns, ','||chr(10));  
+
+    v_script := replace(v_script,'$COLUMNS',v_columns) ||chr(10)||chr(10);
+
+    v_script := v_script || 'INSERT INTO ELO_TABLES (
+      NAME,        
+      DB_LINK,     
+      SOURCE,    
+      TARGET      
+    ) VALUES (
+      '''|nvl(fiv_name,fiv_table)|''',
+      '''||fiv_db_link||''',
+      '''||fiv_table||''',
+      '''||piv_target_schema||'.'||substr(piv_table, instr(piv_target_schema,'.'))||'''
+    );'||chr(10)||chr(10);
+
+
+    for r in c loop
+      v_script := v_script || 'INSERT INTO ELO_COLUMNS (
+        NAME,
+        SOURCE_COL,
+        TARGET_COL
+      ) VALUES (
+        '''|nvl(fiv_name,fiv_table)|''',
+        '''||r.column_name||''',
+        '''||r.column_name||'''    
+      );'||chr(10)||chr(10);
+    end loop;
+
+    v_script := v_script || ' commit;'
+
+    return v_script;
+
+  end;
+
+
+
+
+
 
 END;
