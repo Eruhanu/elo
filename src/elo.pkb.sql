@@ -56,12 +56,12 @@ AS
 
     if trim(v_target_hint) is not null and instr(v_target_hint,'/*+') = 0
     then
-      v_target_hint := '/*+'||v_target_hint||'*/';
+      v_target_hint := '/*+ '||v_target_hint||' */';
     end if;
 
     if trim(v_source_hint) is not null and instr(v_source_hint,'/*+') = 0
     then
-      v_source_hint := '/*+'||v_source_hint||'*/';
+      v_source_hint := '/*+ '||v_source_hint||' */';
     end if;
 
     IF v_delta_column IS NOT NULL THEN

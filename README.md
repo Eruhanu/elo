@@ -45,3 +45,20 @@ to define extraction rule for a table.
   * `name` unique name for the extraction of the table. same name with `ELO_TABLES`
   * `source_col` source column or expression to extract.    
   * `target_col` target column to load data.
+
+
+### Running
+
+  Just call `elo.run` with a name parameter. example:
+
+  ```sql
+    elo.run('NAME_OF_EXT_DEF');
+  ```
+
+### Logs
+
+  You can see the logs by issuing a select like;
+
+  ```sql
+    select * from util.logs order by 3 desc;
+  ```
