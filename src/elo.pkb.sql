@@ -13,18 +13,18 @@ AS
   gv_date_format  varchar2(30) := 'yyyy.mm.dd hh24:mi:ss';
 
   function fun_get_delta_col_type(
-    miv_db_link varchar2,
-    miv_table   varchar2,
-    miv_column  varchar2) return varchar2;
+    iv_db_link varchar2,
+    iv_table   varchar2,
+    iv_column  varchar2) return varchar2;
 
   procedure prc_update_last_delta(
-    miv_name            varchar2,
-    miv_table           varchar2,
-    miv_delta_col       varchar2,
-    miv_delta_col_type  varchar2
+    iv_name            varchar2,
+    iv_table           varchar2,
+    iv_delta_col       varchar2,
+    iv_delta_col_type  varchar2
   );
 
-  procedure run(miv_name varchar2)
+  procedure run(iv_name varchar2)
   is
     v_db_link         varchar2(60);
     v_source          varchar2(100);
@@ -52,7 +52,7 @@ AS
     from
       util.ELO_TABLES
     where
-      name = miv_name;
+      name = iv_name;
 
     if trim(v_target_hint) is not null and instr(v_target_hint,'/*+') = 0
     then
@@ -87,7 +87,7 @@ AS
       LISTAGG(target_col, ', ') WITHIN GROUP (ORDER BY source_col) target_cols
     into v_source_cols, v_target_cols
     from util.ELO_COLUMNS
-    where name = miv_name;
+    where name = iv_name;
 
     gv_sql := '
       INSERT '||v_target_hint||' INTO '|| v_target ||'
@@ -107,10 +107,10 @@ AS
 
     if v_delta_column is not null then
       prc_update_last_delta(
-        miv_name  => miv_name,
-        miv_table => v_target,
-        miv_delta_col => v_delta_column,
-        miv_delta_col_type => v_delta_data_type
+        iv_name  => iv_name,
+        iv_table => v_target,
+        iv_delta_col => v_delta_column,
+        iv_delta_col_type => v_delta_data_type
       );
     end if;
 
@@ -123,16 +123,16 @@ AS
       raise_application_error(gv_sql_errc, gv_sql_errm);
   end;
 
-  function fun_get_delta_col_type(miv_db_link varchar2, miv_table varchar2, miv_column varchar2) return varchar2
+  function fun_get_delta_col_type(iv_db_link varchar2, iv_table varchar2, iv_column varchar2) return varchar2
   is
-    v_owner       varchar2(30) := substr(miv_table,1,instr(miv_table, '.')-1);
-    v_table_name  varchar2(30) := substr(miv_table,instr(miv_table, '.')+1);
+    v_owner       varchar2(30) := substr(iv_table,1,instr(iv_table, '.')-1);
+    v_table_name  varchar2(30) := substr(iv_table,instr(iv_table, '.')+1);
     v_col_type    varchar2(50);
   begin
 
     gv_sql:= '
-      select data_type from all_tab_cols@'||miv_db_link||'
-      where owner = '''||v_owner||''' and table_name='''||v_table_name||''' and column_name = '''|| miv_column||'''
+      select data_type from all_tab_cols@'||iv_db_link||'
+      where owner = '''||v_owner||''' and table_name='''||v_table_name||''' and column_name = '''|| iv_column||'''
     ';
 
     execute immediate gv_sql into v_col_type;
@@ -142,28 +142,28 @@ AS
   end;
 
   procedure prc_update_last_delta(
-    miv_name            varchar2,
-    miv_table           varchar2,
-    miv_delta_col       varchar2,
-    miv_delta_col_type  varchar2
+    iv_name            varchar2,
+    iv_table           varchar2,
+    iv_delta_col       varchar2,
+    iv_delta_col_type  varchar2
   )
   is
     v_last_delta varchar2(1000);
   begin
 
-    if miv_delta_col_type = 'DATE' then
-      gv_sql := 'to_char(max('||miv_delta_col||'),'''||gv_date_format||''')';
+    if iv_delta_col_type = 'DATE' then
+      gv_sql := 'to_char(max('||iv_delta_col||'),'''||gv_date_format||''')';
     else
-      gv_sql := 'max('||miv_delta_col||')';
+      gv_sql := 'max('||iv_delta_col||')';
     end if;
 
-    gv_sql := 'select /*+ parallel(16) */ '||gv_sql||' from '||miv_table;
+    gv_sql := 'select /*+ parallel(16) */ '||gv_sql||' from '||iv_table;
 
     execute immediate gv_sql into v_last_delta;
 
     gv_sql := '
       update ELO_TABLES set last_delta = '''||v_last_delta||'''
-      where name = '''||miv_name||'''
+      where name = '''||iv_name||'''
     ';
 
     execute immediate gv_sql;
@@ -173,10 +173,10 @@ AS
 
 
   procedure define(
-    miv_table varchar2, 
-    miv_dblk  varchar2, 
-    miv_name  varchar2 default null, 
-    miv_target_schema varchar2 default 'ODS'
+    iv_table varchar2, 
+    iv_dblk  varchar2, 
+    iv_name  varchar2 default null, 
+    iv_target_schema varchar2 default 'ODS'
   )
   is 
     table_is_null     exception;
@@ -196,20 +196,20 @@ AS
     v_data_length  number;
   begin
 
-    if miv_table is null then raise table_is_null; end if;
+    if iv_table is null then raise table_is_null; end if;
     
-    if miv_target_schema is null then raise db_link_is_null; end if;
+    if iv_target_schema is null then raise db_link_is_null; end if;
 
 
     v_script := '
-      create table '||miv_target_schema||'.'||substr(miv_table, instr(miv_target_schema,'.'))||' 
+      create table '||iv_target_schema||'.'||substr(iv_table, instr(iv_target_schema,'.'))||' 
       (
         $COLUMNS
       )
     ';
 
-    gv_sql := 'select column_name, data_type, data_length from all_tab_cols@'||miv_dblk|| '
-      where owner||''.''||table_name = '''||upper(miv_table)||''' and
+    gv_sql := 'select column_name, data_type, data_length from all_tab_cols@'||iv_dblk|| '
+      where owner||''.''||table_name = '''||upper(iv_table)||''' and
       hidden_column = ''NO''
     ';
     open c for gv_sql;
@@ -239,10 +239,10 @@ AS
       SOURCE,    
       TARGET      
     ) VALUES (
-      '''||nvl(miv_name,miv_table)||''',
-      '''||miv_dblk||''',
-      '''||miv_table||''',
-      '''||miv_target_schema||'.'||substr(miv_table, instr(miv_target_schema,'.'))||'''
+      '''||nvl(iv_name,iv_table)||''',
+      '''||iv_dblk||''',
+      '''||iv_table||''',
+      '''||iv_target_schema||'.'||substr(iv_table, instr(iv_target_schema,'.'))||'''
     )';
 
     execute immediate v_script;
@@ -261,7 +261,7 @@ AS
         SOURCE_COL,
         TARGET_COL
       ) VALUES (
-        '''||nvl(miv_name, miv_table)||''',
+        '''||nvl(iv_name, iv_table)||''',
         '''||v_column_name||''',
         '''||v_column_name||'''    
       )';
@@ -282,10 +282,10 @@ AS
   end;
 
   function script(
-    miv_table varchar2, 
-    miv_dblk  varchar2, 
-    miv_name  varchar2 default null, 
-    miv_target_schema varchar2 default 'ODS'
+    iv_table varchar2, 
+    iv_dblk  varchar2, 
+    iv_name  varchar2 default null, 
+    iv_target_schema varchar2 default 'ODS'
   ) return varchar2
   is 
     table_is_null     exception;
@@ -305,20 +305,20 @@ AS
      v_data_length  number;
   begin
 
-    if miv_table is null then raise table_is_null; end if;
+    if iv_table is null then raise table_is_null; end if;
     
-    if miv_target_schema is null then raise db_link_is_null; end if;
+    if iv_target_schema is null then raise db_link_is_null; end if;
 
 
     v_script := '
-      create table '||miv_target_schema||'.'||substr(miv_table, instr(miv_target_schema,'.'))||' 
+      create table '||iv_target_schema||'.'||substr(iv_table, instr(iv_target_schema,'.'))||' 
       (
         $COLUMNS
       );
     ';
 
-    gv_sql := 'select column_name, data_type, data_length from all_tab_cols@'||miv_dblk|| '
-      where owner||''.''||table_name = '''||upper(miv_table)||''' and
+    gv_sql := 'select column_name, data_type, data_length from all_tab_cols@'||iv_dblk|| '
+      where owner||''.''||table_name = '''||upper(iv_table)||''' and
       hidden_column = ''NO''
     ';
     open c for gv_sql;
@@ -345,10 +345,10 @@ AS
       SOURCE,    
       TARGET      
     ) VALUES (
-      '''||nvl(miv_name,miv_table)||''',
-      '''||miv_dblk||''',
-      '''||miv_table||''',
-      '''||miv_target_schema||'.'||substr(miv_table, instr(miv_target_schema,'.'))||'''
+      '''||nvl(iv_name,iv_table)||''',
+      '''||iv_dblk||''',
+      '''||iv_table||''',
+      '''||iv_target_schema||'.'||substr(iv_table, instr(iv_target_schema,'.'))||'''
     );'||chr(10)||chr(10);
 
 
@@ -364,7 +364,7 @@ AS
         SOURCE_COL,
         TARGET_COL
       ) VALUES (
-        '''||nvl(miv_name, miv_table)||''',
+        '''||nvl(iv_name, iv_table)||''',
         '''||v_column_name||''',
         '''||v_column_name||'''    
       );'||chr(10)||chr(10);
