@@ -62,3 +62,68 @@ to define extraction rule for a table.
   ```sql
     select * from util.logs order by 3 desc;
   ```
+
+### Methods
+
+  * **run**
+  
+    ```sql
+    procedure run(miv_name varchar2)
+    ```
+
+    ```sql
+    Run the extraction given by the `miv_name` parameter.
+    
+    Arguments: 
+       [miv_str] (varchar2): Name of the extraction in `ELO_TABLES`
+    ```
+
+
+
+  * **define**
+
+    Inserts extraction definitions on `ELO_TABLES` and `ELO_COLUMNS`
+  
+    ```sql
+      procedure script(
+        miv_table varchar2, 
+        miv_dblk varchar2, 
+        miv_name varchar2 default null, 
+        miv_target_schema varchar2 default 'ODS'
+      ) return varchar2
+    ```
+
+    ```sql
+    Run the extraction given by the `miv_name` parameter.
+    
+    Arguments: 
+       [miv_table] (varchar2): Name of the source table.
+       [miv_dblk] (varchar2): db-link to use for source connection.
+       [miv_name] (varchar2): name of the extraction defaults to value of `miv_table`
+       [miv_target_schema='ODS'] (varchar2): target schema name. where to load data.
+    ```
+
+  * **script**
+
+    Returns a script for the extraction deployment.
+  
+    ```sql
+      function script(
+        miv_table varchar2, 
+        miv_dblk varchar2, 
+        miv_name varchar2 default null, 
+        miv_target_schema varchar2 default 'ODS'
+      ) return varchar2
+    ```
+
+    ```sql
+    Run the extraction given by the `miv_name` parameter.
+    
+    Arguments: 
+       [miv_table] (varchar2): Name of the source table.
+       [miv_dblk] (varchar2): db-link to use for source connection.
+       [miv_name] (varchar2): name of the extraction defaults to value of `miv_table`
+       [miv_target_schema='ODS'] (varchar2): target schema name. where to load data.
+    Returns
+       (boolean): Returns a script for the extraction deployment
+    ```

@@ -1,6 +1,6 @@
 CREATE TABLE ELO_TABLES
 (
-  name          varchar2(100), 
+  name          varchar2(100) primary key, 
   db_link       varchar2(60),
   source        varchar2(100),
   target        varchar2(100),
@@ -8,7 +8,7 @@ CREATE TABLE ELO_TABLES
   source_hint   varchar2(4000),
   target_hint   varchar2(4000),
   delta_column  varchar2(50),
-  last_delta    varchar2(1000)
+  last_delta    varchar2(1000) 
 )
 NOLOGGING;
 
@@ -29,7 +29,8 @@ CREATE TABLE ELO_COLUMNS
 (
   name          varchar2(100),
   source_col    varchar2(1000),
-  target_col    varchar2(50)
+  target_col    varchar2(50),
+  constraint PK_ELO_COLUMNS primary key (name, source_col, target_col)
 )
 NOLOGGING;
 
