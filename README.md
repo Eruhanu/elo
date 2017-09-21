@@ -82,7 +82,7 @@ to define extraction rule for a table.
 
   * **define**
 
-    Inserts extraction definitions on `ELO_TABLES` and `ELO_COLUMNS`
+    Inserts extraction definitions to `ELO_TABLES` and `ELO_COLUMNS`
   
     ```sql
       procedure script(
