@@ -16,4 +16,6 @@ AS
     i_target_schema varchar2 default 'ODS'
   ) return varchar2;
 
+  function simulate(i_name varchar2) return clob;
+
 END;

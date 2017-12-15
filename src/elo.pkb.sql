@@ -12,6 +12,8 @@ AS
   gv_sql          LONG := '';
   gv_date_format  varchar2(30) := 'yyyy.mm.dd hh24:mi:ss';
 
+  function build_sql(i_name varchar2) return clob;
+  
   function fun_get_delta_col_type(
     i_db_link varchar2,
     i_table   varchar2,
@@ -98,7 +100,9 @@ AS
         '||v_source||'@'||v_db_link||'
       '||v_filter||'';
 
-    execute immediate 'truncate table ' || v_target;
+    if v_delta_column is null then 
+      execute immediate 'truncate table ' || v_target;
+    end if;
 
     execute immediate gv_sql;
     commit;
@@ -377,6 +381,82 @@ AS
 
   end;
 
+  function build_sql(i_name varchar2) return clob 
+  is
+    v_db_link         varchar2(60);
+    v_source          varchar2(100);
+    v_target          varchar2(100);
+    v_filter          varchar2(4000);
+    v_source_hint     varchar2(4000);
+    v_target_hint     varchar2(4000);
+    v_delta_column    varchar2(50);
+    v_last_delta      varchar2(1000);
+    v_source_cols     long;
+    v_target_cols     long;
+    v_delta_data_type varchar2(50);
+  begin
 
+    select
+      db_link, source, target, filter, source_hint, target_hint, v_delta_column, last_delta
+    into
+      v_db_link, v_source, v_target, v_filter, v_source_hint, v_target_hint, v_delta_column, v_last_delta
+    from
+      util.ELO_TABLES
+    where
+      name = i_name;
+
+    if trim(v_target_hint) is not null and instr(v_target_hint,'/*+') = 0
+    then
+      v_target_hint := '/*+ '||v_target_hint||' */';
+    end if;
+
+    if trim(v_source_hint) is not null and instr(v_source_hint,'/*+') = 0
+    then
+      v_source_hint := '/*+ '||v_source_hint||' */';
+    end if;
+
+    IF v_delta_column IS NOT NULL THEN
+      v_delta_data_type := fun_get_delta_col_type(v_db_link, v_source, v_delta_column);
+    END IF;	
+    	
+    if v_filter is not null or v_delta_column is not null then
+      v_filter := 'WHERE ' || v_filter;
+      if v_delta_column is not null then
+        v_filter := v_filter || ' AND '||v_delta_column||'>'||
+        case v_delta_data_type
+          when 'DATE'     then pl.date_string(to_date(v_last_delta,gv_date_format))
+          when 'NUMBER'   then to_number(v_last_delta)
+          when 'CHAR'     then v_last_delta
+          when 'VARCHAR'  then v_last_delta
+          else v_last_delta
+        end;
+      end if;
+    end if;
+
+    select
+      LISTAGG(source_col, ', ') WITHIN GROUP (ORDER BY source_col) source_cols,
+      LISTAGG(target_col, ', ') WITHIN GROUP (ORDER BY source_col) target_cols
+    into v_source_cols, v_target_cols
+    from util.ELO_COLUMNS
+    where name = i_name;
+
+    gv_sql := '
+      INSERT '||v_target_hint||' INTO '|| v_target ||'
+      ('||v_target_cols|| ')
+      SELECT '||v_source_hint||'
+      '||v_source_cols||'
+      FROM
+        '||v_source||'@'||v_db_link||'
+      '||v_filter||'';
+  
+    return gv_sql;
+  
+  end;
+
+  function simulate(i_name varchar2) return clob
+  is 
+  begin
+    return build_sql(i_name);
+  end;
 
 END;
