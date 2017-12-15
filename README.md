@@ -68,14 +68,14 @@ to define extraction rule for a table.
   * **run**
   
     ```sql
-    procedure run(iv_name varchar2)
+    procedure run(i_name varchar2)
     ```
 
     ```sql
-    Run the extraction given by the `iv_name` parameter.
+    Run the extraction given by the `i_name` parameter.
     
     Arguments: 
-       [iv_str] (varchar2): Name of the extraction in `ELO_TABLES`
+       [i_str] (varchar2): Name of the extraction in `ELO_TABLES`
     ```
 
 
@@ -86,21 +86,21 @@ to define extraction rule for a table.
   
     ```sql
       procedure script(
-        iv_table varchar2, 
-        iv_dblk varchar2, 
-        iv_name varchar2 default null, 
-        iv_target_schema varchar2 default 'ODS'
+        i_table varchar2, 
+        i_dblk varchar2, 
+        i_name varchar2 default null, 
+        i_target_schema varchar2 default 'ODS'
       ) return varchar2
     ```
 
     ```sql
-    Run the extraction given by the `iv_name` parameter.
+    Run the extraction given by the `i_name` parameter.
     
     Arguments: 
-       [iv_table] (varchar2): Name of the source table.
-       [iv_dblk] (varchar2): db-link to use for source connection.
-       [iv_name] (varchar2): name of the extraction defaults to value of `iv_table`
-       [iv_target_schema='ODS'] (varchar2): target schema name. where to load data.
+       [i_table] (varchar2): Name of the source table.
+       [i_dblk] (varchar2): db-link to use for source connection.
+       [i_name] (varchar2): name of the extraction defaults to value of `i_table`
+       [i_target_schema='ODS'] (varchar2): target schema name. where to load data.
     ```
 
   * **script**
@@ -109,21 +109,21 @@ to define extraction rule for a table.
   
     ```sql
       function script(
-        iv_table varchar2, 
-        iv_dblk varchar2, 
-        iv_name varchar2 default null, 
-        iv_target_schema varchar2 default 'ODS'
+        i_table varchar2, 
+        i_dblk varchar2, 
+        i_name varchar2 default null, 
+        i_target_schema varchar2 default 'ODS'
       ) return varchar2
     ```
 
     ```sql
-    Run the extraction given by the `iv_name` parameter.
+    Run the extraction given by the `i_name` parameter.
     
     Arguments: 
-       [iv_table] (varchar2): Name of the source table.
-       [iv_dblk] (varchar2): db-link to use for source connection.
-       [iv_name] (varchar2): name of the extraction defaults to value of `iv_table`
-       [iv_target_schema='ODS'] (varchar2): target schema name. where to load data.
+       [i_table] (varchar2): Name of the source table.
+       [i_dblk] (varchar2): db-link to use for source connection.
+       [i_name] (varchar2): name of the extraction defaults to value of `i_table`
+       [i_target_schema='ODS'] (varchar2): target schema name. where to load data.
     Returns
        (boolean): Returns a script for the extraction deployment
     ```
