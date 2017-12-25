@@ -105,9 +105,8 @@ AS
     end if;
 
     execute immediate gv_sql;
-    commit;
-
     pl.logger.success(SQL%ROWCOUNT || ' : inserted', gv_sql);
+    commit;
 
     if v_delta_column is not null then
       prc_update_last_delta(
